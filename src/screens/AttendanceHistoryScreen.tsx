@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Alert, Button, FlatList, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Button, FlatList, Image, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getAttendanceHistory } from '../api/attendance';
 import type { AttendanceRecord } from '../types';
@@ -46,6 +46,13 @@ export function AttendanceHistoryScreen() {
               <Text style={{ color: '#666' }}>
                 {Number(item.latitude).toFixed(5)}, {Number(item.longitude).toFixed(5)}
               </Text>
+            ) : null}
+            {item.photoUrl ? (
+              <Image
+                source={{ uri: item.photoUrl }}
+                style={{ height: 180, borderRadius: 8, marginTop: 10, backgroundColor: '#f2f2f2' }}
+                resizeMode="cover"
+              />
             ) : null}
           </View>
         )}

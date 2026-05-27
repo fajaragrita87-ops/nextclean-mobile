@@ -60,6 +60,9 @@ export function TaskDetailScreen({ route, navigation }: Props) {
       {loading && !task ? <ActivityIndicator /> : null}
 
       <Text style={{ marginBottom: 6 }}>ID: {taskId}</Text>
+      {task?.code ? <Text style={{ marginBottom: 6 }}>Kode: {task.code}</Text> : null}
+      {task?.customerName ? <Text style={{ marginBottom: 6 }}>Customer: {task.customerName}</Text> : null}
+      {task?.updatedAt ? <Text style={{ marginBottom: 6 }}>Update: {task.updatedAt}</Text> : null}
       <Text style={{ marginBottom: 16 }}>Status saat ini: {task?.status ?? '-'}</Text>
 
       <Text style={{ fontWeight: '600', marginBottom: 8 }}>Update Status</Text>
@@ -76,4 +79,3 @@ export function TaskDetailScreen({ route, navigation }: Props) {
     </View>
   );
 }
-

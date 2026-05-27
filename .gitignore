@@ -5,10 +5,14 @@ node_modules/
 
 # Expo
 .expo/
+.expo_home/
 dist/
 web-build/
 expo-env.d.ts
 .dotslash_cache/
+node_modules.bak2/
+node_modules_old/
+package-lock.bad.json
 
 # Native
 .kotlin/

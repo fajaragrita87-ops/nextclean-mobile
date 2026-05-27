@@ -54,6 +54,7 @@ export function TaskListScreen({ navigation }: Props) {
             <Text style={{ fontWeight: '600' }}>{getTitle(item)}</Text>
             {item.customerName ? <Text>{item.customerName}</Text> : null}
             <Text style={{ color: '#666' }}>Status: {item.status}</Text>
+            {item.updatedAt ? <Text style={{ color: '#999' }}>Update: {item.updatedAt}</Text> : null}
           </Pressable>
         )}
         ListEmptyComponent={!loading ? <Text style={{ color: '#666' }}>Belum ada pekerjaan.</Text> : null}
@@ -61,4 +62,3 @@ export function TaskListScreen({ navigation }: Props) {
     </View>
   );
 }
-
