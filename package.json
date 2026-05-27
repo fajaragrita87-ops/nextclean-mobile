@@ -21,9 +21,9 @@
   },
   "scripts": {
     "start": "expo start",
-    "start:win": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"New-Item -ItemType Directory -Force .\\\\.dotslash_cache | Out-Null; $env:DOTSLASH_CACHE=\\\"$pwd\\\\\\\\.dotslash_cache\\\"; npx --no-install expo start\"",
+    "start:win": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"New-Item -ItemType Directory -Force .\\\\.dotslash_cache | Out-Null; $env:DOTSLASH_CACHE=\\\"$pwd\\\\\\\\.dotslash_cache\\\"; node .\\\\node_modules\\\\expo\\\\bin\\\\cli start\"",
     "android": "expo start --android",
-    "android:win": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"New-Item -ItemType Directory -Force .\\\\.dotslash_cache | Out-Null; $env:DOTSLASH_CACHE=\\\"$pwd\\\\\\\\.dotslash_cache\\\"; npx --no-install expo start --android\"",
+    "android:win": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"New-Item -ItemType Directory -Force .\\\\.dotslash_cache | Out-Null; $env:DOTSLASH_CACHE=\\\"$pwd\\\\\\\\.dotslash_cache\\\"; node .\\\\node_modules\\\\expo\\\\bin\\\\cli start --android\"",
     "ios": "expo start --ios",
     "web": "expo start --web"
   },
