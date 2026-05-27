@@ -1,5 +1,6 @@
 import { apiRequest } from './client';
 import type { User } from '../types';
+import { isMockApiEnabled } from './mockSwitch';
 
 export type LoginResponse = {
   token: string;
@@ -7,6 +8,14 @@ export type LoginResponse = {
 };
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
+  if (isMockApiEnabled()) {
+    if (!email.trim() || !password) throw new Error('Email dan password wajib diisi.');
+    return {
+      token: 'mock-token',
+      user: { id: 1, email: email.trim(), name: 'Mock User' },
+    };
+  }
+
   const res = await apiRequest<any>('/login', {
     method: 'POST',
     body: { email, password },
@@ -20,4 +29,3 @@ export async function login(email: string, password: string): Promise<LoginRespo
   const user: User | undefined = res?.user ?? res?.data?.user;
   return { token, user };
 }
-

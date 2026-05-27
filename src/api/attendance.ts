@@ -1,5 +1,9 @@
 import { apiRequest } from './client';
 import type { AttendanceRecord } from '../types';
+import { isMockApiEnabled } from './mockSwitch';
+import { readJson, writeJson } from './mockStorage';
+
+const MOCK_HISTORY_KEY = 'mock_attendance_history';
 
 function buildPhotoFormData(params: {
   userId?: string | number;
@@ -39,6 +43,21 @@ export async function checkIn(input: {
   longitude?: number;
   photoUri: string;
 }): Promise<AttendanceRecord | any> {
+  if (isMockApiEnabled()) {
+    const record: AttendanceRecord = {
+      id: Date.now(),
+      type: 'checkin',
+      timestamp: input.timestamp ?? new Date().toISOString(),
+      latitude: input.latitude,
+      longitude: input.longitude,
+      photoUrl: input.photoUri,
+    };
+    const current = await readJson<AttendanceRecord[]>(MOCK_HISTORY_KEY, []);
+    const next = [record, ...current].slice(0, 50);
+    await writeJson(MOCK_HISTORY_KEY, next);
+    return record;
+  }
+
   const formData = buildPhotoFormData(input);
   return apiRequest<any>('/attendance/checkin', {
     method: 'POST',
@@ -55,6 +74,21 @@ export async function checkOut(input: {
   longitude?: number;
   photoUri: string;
 }): Promise<AttendanceRecord | any> {
+  if (isMockApiEnabled()) {
+    const record: AttendanceRecord = {
+      id: Date.now(),
+      type: 'checkout',
+      timestamp: input.timestamp ?? new Date().toISOString(),
+      latitude: input.latitude,
+      longitude: input.longitude,
+      photoUrl: input.photoUri,
+    };
+    const current = await readJson<AttendanceRecord[]>(MOCK_HISTORY_KEY, []);
+    const next = [record, ...current].slice(0, 50);
+    await writeJson(MOCK_HISTORY_KEY, next);
+    return record;
+  }
+
   const formData = buildPhotoFormData(input);
   return apiRequest<any>('/attendance/checkout', {
     method: 'POST',
@@ -64,6 +98,10 @@ export async function checkOut(input: {
 }
 
 export async function getAttendanceHistory(token: string): Promise<AttendanceRecord[]> {
+  if (isMockApiEnabled()) {
+    return readJson<AttendanceRecord[]>(MOCK_HISTORY_KEY, []);
+  }
+
   const res = await apiRequest<any>('/attendance/history', { token });
   const items = res?.data ?? res;
   if (Array.isArray(items)) {
@@ -71,4 +109,3 @@ export async function getAttendanceHistory(token: string): Promise<AttendanceRec
   }
   return [];
 }
-
