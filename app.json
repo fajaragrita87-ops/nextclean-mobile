@@ -7,9 +7,19 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Diperlukan untuk mengambil foto selfie saat absensi.",
+        "NSLocationWhenInUseUsageDescription": "Diperlukan untuk mengambil lokasi GPS saat absensi.",
+        "NSPhotoLibraryAddUsageDescription": "Diperlukan untuk menyimpan foto jika dibutuhkan."
+      }
     },
     "android": {
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
