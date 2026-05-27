@@ -5,12 +5,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../state/AuthContext';
 import { AttendanceScreen } from '../screens/AttendanceScreen';
 import { AttendanceHistoryScreen } from '../screens/AttendanceHistoryScreen';
+import { DashboardScreen } from '../screens/DashboardScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { TaskDetailScreen } from '../screens/TaskDetailScreen';
 import { TaskListScreen } from '../screens/TaskListScreen';
 
 export type RootStackParamList = {
   Login: undefined;
+  Dashboard: undefined;
   Attendance: undefined;
   AttendanceHistory: undefined;
   TaskList: undefined;
@@ -39,6 +41,7 @@ export function AppNavigator() {
           <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Login' }} />
         ) : (
           <>
+            <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'NextClean' }} />
             <Stack.Screen
               name="Attendance"
               component={AttendanceScreen}
@@ -67,4 +70,3 @@ export function AppNavigator() {
     </NavigationContainer>
   );
 }
-
