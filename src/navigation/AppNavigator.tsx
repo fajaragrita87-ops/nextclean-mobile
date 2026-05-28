@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Button, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../state/AuthContext';
@@ -30,7 +30,7 @@ function Loading() {
 }
 
 export function AppNavigator() {
-  const { token, bootstrapped, signOut } = useAuth();
+  const { token, bootstrapped } = useAuth();
 
   if (!bootstrapped) return <Loading />;
 
@@ -38,32 +38,30 @@ export function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator>
         {!token ? (
-          <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Login' }} />
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         ) : (
           <>
-            <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'NextClean' }} />
+            <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: false }} />
             <Stack.Screen
               name="Attendance"
               component={AttendanceScreen}
               options={{
-                title: 'Absensi',
-                headerRight: () => <Button title="Logout" onPress={signOut} />,
+                headerShown: false,
               }}
             />
             <Stack.Screen
               name="AttendanceHistory"
               component={AttendanceHistoryScreen}
-              options={{ title: 'Riwayat Absensi' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="TaskList"
               component={TaskListScreen}
               options={{
-                title: 'Pekerjaan Laundry',
-                headerRight: () => <Button title="Logout" onPress={signOut} />,
+                headerShown: false,
               }}
             />
-            <Stack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: 'Detail' }} />
+            <Stack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ headerShown: false }} />
           </>
         )}
       </Stack.Navigator>

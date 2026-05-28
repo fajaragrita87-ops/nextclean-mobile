@@ -1,7 +1,18 @@
 import React from 'react';
-import { Alert, Button, KeyboardAvoidingView, Platform, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { login } from '../api/auth';
 import { useAuth } from '../state/AuthContext';
+import { USE_MOCK_API } from '../config';
 
 export function LoginScreen() {
   const { signIn } = useAuth();
@@ -28,48 +39,200 @@ export function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, padding: 16, justifyContent: 'center' }}
+      style={styles.safe}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={{ fontSize: 24, fontWeight: '600', marginBottom: 16 }}>NextClean Mobile</Text>
+      <View style={styles.bgTop} pointerEvents="none" />
 
-      <Text style={{ marginBottom: 6 }}>Email</Text>
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        placeholder="email@contoh.com"
-        style={{
-          borderWidth: 1,
-          borderColor: '#ccc',
-          padding: 12,
-          borderRadius: 8,
-          marginBottom: 12,
-        }}
-      />
+      <View style={styles.card}>
+        <View style={styles.brandRow}>
+          <View style={styles.logo}>
+            <Text style={styles.logoText}>NC</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.appTitle}>NextClean</Text>
+            <Text style={styles.appSub}>
+              Masuk untuk lanjut{USE_MOCK_API ? ' • Mock API' : ''}
+            </Text>
+          </View>
+        </View>
 
-      <Text style={{ marginBottom: 6 }}>Password</Text>
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholder="••••••••"
-        style={{
-          borderWidth: 1,
-          borderColor: '#ccc',
-          padding: 12,
-          borderRadius: 8,
-          marginBottom: 16,
-        }}
-      />
+        <View style={{ height: 14 }} />
 
-      <Button title={loading ? 'Masuk...' : 'Login'} onPress={onSubmit} disabled={loading} />
-      <View style={{ height: 12 }} />
-      <Text style={{ color: '#666' }}>
-        Pastikan API backend aktif dan set EXPO_PUBLIC_API_BASE_URL jika perlu.
-      </Text>
+        <Text style={styles.label}>Email</Text>
+        <View style={styles.inputWrap}>
+          <Ionicons name="mail-outline" size={18} color={colors.textMuted} />
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="email@contoh.com"
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+          />
+        </View>
+
+        <View style={{ height: 12 }} />
+
+        <Text style={styles.label}>Password</Text>
+        <View style={styles.inputWrap}>
+          <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="••••••••"
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+          />
+        </View>
+
+        <View style={{ height: 14 }} />
+
+        <Pressable
+          onPress={onSubmit}
+          disabled={loading}
+          style={({ pressed }) => [styles.loginBtn, loading ? styles.disabled : null, pressed ? styles.pressed : null]}
+        >
+          <Text style={styles.loginText}>{loading ? 'Masuk...' : 'Login'}</Text>
+          <Ionicons name="arrow-forward" size={18} color="#fff" />
+        </Pressable>
+
+        <View style={{ height: 12 }} />
+
+        <View style={styles.notice}>
+          <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
+          <Text style={styles.noticeText}>
+            Pastikan API backend aktif dan set EXPO_PUBLIC_API_BASE_URL jika perlu.
+          </Text>
+        </View>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
+const colors = {
+  bg: '#F5F6FB',
+  surface: '#FFFFFF',
+  primary: '#5B67F1',
+  primarySoft: '#EEF0FF',
+  text: '#0E1222',
+  textMuted: '#6C7286',
+  border: '#E7E9F3',
+};
+
+const styles = StyleSheet.create({
+  pressed: { opacity: 0.88 },
+  disabled: { opacity: 0.65 },
+  safe: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    padding: 16,
+    justifyContent: 'center',
+  },
+  bgTop: {
+    position: 'absolute',
+    top: -20,
+    left: 0,
+    right: 0,
+    height: 280,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    opacity: 0.15,
+  },
+  card: {
+    borderRadius: 26,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  logo: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: '#DDE0FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: colors.primary,
+    letterSpacing: 0.4,
+  },
+  appTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: colors.text,
+  },
+  appSub: {
+    marginTop: 3,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#FAFBFF',
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  loginBtn: {
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  loginText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#FAFBFF',
+    borderRadius: 18,
+    padding: 12,
+  },
+  noticeText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+    lineHeight: 16,
+  },
+});
