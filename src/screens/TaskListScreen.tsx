@@ -3,11 +3,11 @@ import { ActivityIndicator, Alert, Button, FlatList, Pressable, Text, View } fro
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getTransactions } from '../api/transactions';
-import type { RootStackParamList } from '../navigation/AppNavigator';
+import type { TaskStackParamList } from '../navigation/types';
 import type { LaundryTask } from '../types';
 import { useAuth } from '../state/AuthContext';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'TaskList'>;
+type Props = NativeStackScreenProps<TaskStackParamList, 'TaskList'>;
 
 function getTitle(task: LaundryTask): string {
   return task.code ?? `#${task.id}`;

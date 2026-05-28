@@ -1,13 +1,14 @@
 import React from 'react';
 import { Alert, Button, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { checkIn, checkOut } from '../api/attendance';
-import type { RootStackParamList } from '../navigation/AppNavigator';
+import type { AppDrawerParamList, AttendanceStackParamList } from '../navigation/types';
 import { useAuth } from '../state/AuthContext';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Attendance'>;
+type Props = NativeStackScreenProps<AttendanceStackParamList, 'AttendanceHome'>;
 
 async function pickSelfie(): Promise<string> {
   const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -42,6 +43,7 @@ export function AttendanceScreen({ navigation }: Props) {
   const { token, user } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [lastInfo, setLastInfo] = React.useState<string | null>(null);
+  const drawerNav = navigation.getParent<DrawerNavigationProp<AppDrawerParamList>>();
 
   const doAttendance = React.useCallback(
     async (type: 'checkin' | 'checkout') => {
@@ -95,7 +97,7 @@ export function AttendanceScreen({ navigation }: Props) {
       <View style={{ height: 24 }} />
       <Button title="Riwayat Absensi" onPress={() => navigation.navigate('AttendanceHistory')} />
       <View style={{ height: 12 }} />
-      <Button title="Pekerjaan Laundry" onPress={() => navigation.navigate('TaskList')} />
+      <Button title="Pekerjaan Laundry" onPress={() => drawerNav?.navigate('Tasks', { screen: 'TaskList' })} />
 
       <View style={{ height: 24 }} />
       {lastInfo ? <Text style={{ color: '#333' }}>{lastInfo}</Text> : null}
@@ -106,4 +108,3 @@ export function AttendanceScreen({ navigation }: Props) {
     </View>
   );
 }
-

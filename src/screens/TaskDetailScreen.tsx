@@ -2,12 +2,12 @@ import React from 'react';
 import { ActivityIndicator, Alert, Button, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getTransactions, updateTransactionStatus } from '../api/transactions';
-import type { RootStackParamList } from '../navigation/AppNavigator';
+import type { TaskStackParamList } from '../navigation/types';
 import { LAUNDRY_STATUSES } from '../types';
 import type { LaundryTask, LaundryStatus } from '../types';
 import { useAuth } from '../state/AuthContext';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'TaskDetail'>;
+type Props = NativeStackScreenProps<TaskStackParamList, 'TaskDetail'>;
 
 export function TaskDetailScreen({ route, navigation }: Props) {
   const { token } = useAuth();
