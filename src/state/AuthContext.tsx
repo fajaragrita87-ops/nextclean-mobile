@@ -2,6 +2,7 @@ import React from 'react';
 import type { User } from '../types';
 import { clearAuthToken, getAuthToken, getStoredString, setAuthToken } from '../storage/authToken';
 import { setApiBaseUrlOverride } from '../config';
+import { getProfile } from '../api/auth';
 
 const API_BASE_URL_KEY = 'api_base_url';
 
@@ -42,6 +43,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ]);
         if (cancelled) return;
         setApiBaseUrlOverride(apiBaseUrl);
+        if (token) {
+          try {
+            const profile = await getProfile(token);
+            if (!cancelled) setState({ token, user: profile, bootstrapped: true });
+            return;
+          } catch {}
+        }
         setState((prev) => ({ ...prev, token: token ?? null, bootstrapped: true }));
       } catch {
         if (cancelled) return;

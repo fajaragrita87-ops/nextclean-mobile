@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 let apiBaseUrlOverride: string | null = null;
 
 export function setApiBaseUrlOverride(value: string | null) {
@@ -10,7 +8,7 @@ export function getDefaultApiBaseUrl(): string {
   const env = process.env.EXPO_PUBLIC_API_BASE_URL;
   if (env && typeof env === 'string') return env;
 
-  return 'https://next-clean.demo.minimonster.id/api';
+  return 'https://next-clean.demo.minimonster.id';
 }
 
 export function getApiBaseUrl(): string {

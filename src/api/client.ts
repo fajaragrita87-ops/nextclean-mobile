@@ -22,8 +22,12 @@ export async function apiRequest<T>(
   path: string,
   { method = 'GET', token, body, formData }: RequestOptions = {}
 ): Promise<T> {
-  const base = getApiBaseUrl();
-  const url = `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+  const rawBase = getApiBaseUrl().replace(/\/+$/, '');
+  const lower = rawBase.toLowerCase();
+  const hasApiPrefix = lower.endsWith('/api') || lower.includes('/api/');
+  const apiPrefix = hasApiPrefix ? '' : '/api';
+  const urlPath = `${path.startsWith('/') ? '' : '/'}${path}`;
+  const url = `${rawBase}${apiPrefix}${urlPath}`;
 
   const headers: Record<string, string> = {
     Accept: 'application/json',

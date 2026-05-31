@@ -7,6 +7,13 @@ export type LoginResponse = {
   user?: User;
 };
 
+export async function getProfile(token: string): Promise<User> {
+  const res = await apiRequest<any>('/profile', { token });
+  const user: User | undefined = res?.data ?? res?.user ?? res?.data?.user;
+  if (!user) throw new Error('Gagal mengambil profil (user tidak ditemukan di response).');
+  return user;
+}
+
 export async function login(email: string, password: string): Promise<LoginResponse> {
   if (isMockApiEnabled()) {
     if (!email.trim() || !password) throw new Error('Email dan password wajib diisi.');

@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { login } from '../api/auth';
+import { getProfile, login } from '../api/auth';
 import { useAuth } from '../state/AuthContext';
 import { getApiBaseUrl, getDefaultApiBaseUrl, setApiBaseUrlOverride, USE_MOCK_API } from '../config';
 import { getStoredString, removeStoredString, setStoredString } from '../storage/authToken';
@@ -21,16 +21,11 @@ function normalizeBaseUrl(input: string): string | null {
   const raw = input.trim();
   if (!raw) return null;
   const withScheme = raw.includes('://') ? raw : `http://${raw}`;
-  const noTrailing = withScheme.replace(/\/+$/, '');
-  if (noTrailing.endsWith('/api')) return noTrailing;
-  const lower = noTrailing.toLowerCase();
-  const hasApiPath = lower.includes('/api/');
-  if (hasApiPath) return noTrailing;
-  return `${noTrailing}/api`;
+  return withScheme.replace(/\/+$/, '');
 }
 
 export function LoginScreen() {
-  const { signIn } = useAuth();
+  const { signIn, setUser } = useAuth();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [apiBaseUrl, setApiBaseUrl] = React.useState(getApiBaseUrl());
@@ -74,12 +69,18 @@ export function LoginScreen() {
     try {
       const res = await login(email.trim(), password);
       await signIn({ token: res.token, user: res.user ?? null });
+      if (!res.user) {
+        try {
+          const profile = await getProfile(res.token);
+          setUser(profile);
+        } catch {}
+      }
     } catch (e: any) {
       Alert.alert('Login gagal', String(e?.message ?? e));
     } finally {
       setLoading(false);
     }
-  }, [apiBaseUrl, email, password, signIn]);
+  }, [apiBaseUrl, email, password, setUser, signIn]);
 
   return (
     <KeyboardAvoidingView
