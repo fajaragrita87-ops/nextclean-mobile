@@ -1,4 +1,4 @@
-import { apiRequest } from './client';
+import { ApiError, apiRequest } from './client';
 import type { LaundryTask, LaundryStatus } from '../types';
 import { isMockApiEnabled } from './mockSwitch';
 import { readJson, writeJson } from './mockStorage';
@@ -25,12 +25,19 @@ export async function getTransactions(token: string): Promise<LaundryTask[]> {
     return seeded;
   }
 
-  const res = await apiRequest<any>('/transactions', { token });
-  const items = res?.data ?? res;
-  if (Array.isArray(items)) {
-    return items as LaundryTask[];
+  try {
+    const res = await apiRequest<any>('/transactions', { token });
+    const items = res?.data ?? res;
+    if (Array.isArray(items)) {
+      return items as LaundryTask[];
+    }
+    return [];
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      return [];
+    }
+    throw e;
   }
-  return [];
 }
 
 export async function updateTransactionStatus(input: {
