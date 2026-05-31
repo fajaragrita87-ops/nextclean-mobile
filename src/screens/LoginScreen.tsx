@@ -21,7 +21,12 @@ function normalizeBaseUrl(input: string): string | null {
   const raw = input.trim();
   if (!raw) return null;
   const withScheme = raw.includes('://') ? raw : `http://${raw}`;
-  return withScheme.replace(/\/+$/, '');
+  const noTrailing = withScheme.replace(/\/+$/, '');
+  if (noTrailing.endsWith('/api')) return noTrailing;
+  const lower = noTrailing.toLowerCase();
+  const hasApiPath = lower.includes('/api/');
+  if (hasApiPath) return noTrailing;
+  return `${noTrailing}/api`;
 }
 
 export function LoginScreen() {

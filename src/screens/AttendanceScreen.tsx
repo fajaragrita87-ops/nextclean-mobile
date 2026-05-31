@@ -41,7 +41,7 @@ async function getGps(): Promise<{ latitude: number; longitude: number }> {
 }
 
 export function AttendanceScreen({ navigation }: Props) {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [lastInfo, setLastInfo] = React.useState<string | null>(null);
 
@@ -50,23 +50,24 @@ export function AttendanceScreen({ navigation }: Props) {
       if (!token) return;
       setLoading(true);
       try {
-        const [photoUri, gps] = await Promise.all([pickSelfie(), getGps()]);
-        const payload = {
-          token,
-          userId: user?.id,
-          timestamp: new Date().toISOString(),
-          latitude: gps.latitude,
-          longitude: gps.longitude,
-          photoUri,
-        };
-
         if (type === 'checkin') {
-          await checkIn(payload);
-          setLastInfo(`Check-in sukses (${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)})`);
+          const [photoUri, gps] = await Promise.all([pickSelfie(), getGps()]);
+          await checkIn({
+            token,
+            latitude: gps.latitude,
+            longitude: gps.longitude,
+            photoUri,
+          });
+          setLastInfo(`Absen masuk sukses (${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)})`);
           Alert.alert('Sukses', 'Absen masuk berhasil.');
         } else {
-          await checkOut(payload);
-          setLastInfo(`Check-out sukses (${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)})`);
+          const gps = await getGps();
+          await checkOut({
+            token,
+            latitude: gps.latitude,
+            longitude: gps.longitude,
+          });
+          setLastInfo(`Absen pulang sukses (${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)})`);
           Alert.alert('Sukses', 'Absen pulang berhasil.');
         }
       } catch (e: any) {
@@ -75,7 +76,7 @@ export function AttendanceScreen({ navigation }: Props) {
         setLoading(false);
       }
     },
-    [token, user?.id]
+    [token]
   );
 
   return (
@@ -83,7 +84,7 @@ export function AttendanceScreen({ navigation }: Props) {
       navigation={navigation}
       activeRoute="Attendance"
       title="Absensi"
-      subtitle="Selfie + GPS untuk check-in & check-out"
+      subtitle="Selfie + GPS untuk absen masuk, GPS untuk absen pulang"
       rightTop={
         loading ? (
           <View style={styles.loadingChip}>

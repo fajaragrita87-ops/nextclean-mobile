@@ -6,20 +6,12 @@ import { readJson, writeJson } from './mockStorage';
 const MOCK_HISTORY_KEY = 'mock_attendance_history';
 
 function buildPhotoFormData(params: {
-  userId?: string | number;
-  timestamp?: string;
   latitude?: number;
   longitude?: number;
   photoUri: string;
 }): FormData {
   const form = new FormData();
 
-  if (params.userId !== undefined) {
-    form.append('user_id', String(params.userId));
-  }
-  if (params.timestamp) {
-    form.append('timestamp', params.timestamp);
-  }
   if (params.latitude !== undefined) {
     form.append('latitude', String(params.latitude));
   }
@@ -31,14 +23,12 @@ function buildPhotoFormData(params: {
   const name = `selfie-${Date.now()}.jpg`;
   const type = 'image/jpeg';
 
-  form.append('foto', { uri, name, type } as any);
+  form.append('face_image', { uri, name, type } as any);
   return form;
 }
 
 export async function checkIn(input: {
   token: string;
-  userId?: string | number;
-  timestamp?: string;
   latitude?: number;
   longitude?: number;
   photoUri: string;
@@ -47,7 +37,7 @@ export async function checkIn(input: {
     const record: AttendanceRecord = {
       id: Date.now(),
       type: 'checkin',
-      timestamp: input.timestamp ?? new Date().toISOString(),
+      timestamp: new Date().toISOString(),
       latitude: input.latitude,
       longitude: input.longitude,
       photoUrl: input.photoUri,
@@ -59,7 +49,7 @@ export async function checkIn(input: {
   }
 
   const formData = buildPhotoFormData(input);
-  return apiRequest<any>('/attendance/checkin', {
+  return apiRequest<any>('/attendance/clock-in', {
     method: 'POST',
     token: input.token,
     formData,
@@ -68,20 +58,17 @@ export async function checkIn(input: {
 
 export async function checkOut(input: {
   token: string;
-  userId?: string | number;
-  timestamp?: string;
   latitude?: number;
   longitude?: number;
-  photoUri: string;
 }): Promise<AttendanceRecord | any> {
   if (isMockApiEnabled()) {
     const record: AttendanceRecord = {
       id: Date.now(),
       type: 'checkout',
-      timestamp: input.timestamp ?? new Date().toISOString(),
+      timestamp: new Date().toISOString(),
       latitude: input.latitude,
       longitude: input.longitude,
-      photoUrl: input.photoUri,
+      photoUrl: undefined,
     };
     const current = await readJson<AttendanceRecord[]>(MOCK_HISTORY_KEY, []);
     const next = [record, ...current].slice(0, 50);
@@ -89,11 +76,9 @@ export async function checkOut(input: {
     return record;
   }
 
-  const formData = buildPhotoFormData(input);
-  return apiRequest<any>('/attendance/checkout', {
+  return apiRequest<any>('/attendance/clock-out', {
     method: 'POST',
     token: input.token,
-    formData,
   });
 }
 

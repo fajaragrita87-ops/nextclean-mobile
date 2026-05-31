@@ -50,9 +50,9 @@ export function DashboardScreen({ navigation }: Props) {
     if (!token) return;
     setLoading(true);
     try {
-      const [tasksRes, attRes] = await Promise.all([getTransactions(token), getAttendanceHistory(token)]);
-      setTasks(tasksRes);
-      setAttendance(attRes);
+      const [tasksRes, attRes] = await Promise.allSettled([getTransactions(token), getAttendanceHistory(token)]);
+      if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value);
+      if (attRes.status === 'fulfilled') setAttendance(attRes.value);
     } finally {
       setLoading(false);
     }
