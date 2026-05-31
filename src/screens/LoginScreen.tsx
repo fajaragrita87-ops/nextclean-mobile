@@ -12,15 +12,54 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { login } from '../api/auth';
 import { useAuth } from '../state/AuthContext';
-import { USE_MOCK_API } from '../config';
+import { getApiBaseUrl, getDefaultApiBaseUrl, setApiBaseUrlOverride, USE_MOCK_API } from '../config';
+import { getStoredString, removeStoredString, setStoredString } from '../storage/authToken';
+
+const API_BASE_URL_KEY = 'api_base_url';
+
+function normalizeBaseUrl(input: string): string | null {
+  const raw = input.trim();
+  if (!raw) return null;
+  const withScheme = raw.includes('://') ? raw : `http://${raw}`;
+  return withScheme.replace(/\/+$/, '');
+}
 
 export function LoginScreen() {
   const { signIn } = useAuth();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [apiBaseUrl, setApiBaseUrl] = React.useState(getApiBaseUrl());
   const [loading, setLoading] = React.useState(false);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const stored = await getStoredString(API_BASE_URL_KEY);
+      if (cancelled) return;
+      if (stored) {
+        setApiBaseUrl(stored);
+        setApiBaseUrlOverride(stored);
+      } else {
+        const def = getDefaultApiBaseUrl();
+        setApiBaseUrl(def);
+        setApiBaseUrlOverride(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const onSubmit = React.useCallback(async () => {
+    const normalized = normalizeBaseUrl(apiBaseUrl);
+    if (normalized) {
+      await setStoredString(API_BASE_URL_KEY, normalized);
+      setApiBaseUrlOverride(normalized);
+    } else {
+      await removeStoredString(API_BASE_URL_KEY);
+      setApiBaseUrlOverride(null);
+    }
+
     if (!email.trim() || !password) {
       Alert.alert('Lengkapi data', 'Email dan password wajib diisi.');
       return;
@@ -35,7 +74,7 @@ export function LoginScreen() {
     } finally {
       setLoading(false);
     }
-  }, [email, password, signIn]);
+  }, [apiBaseUrl, email, password, signIn]);
 
   return (
     <KeyboardAvoidingView
@@ -88,6 +127,22 @@ export function LoginScreen() {
           />
         </View>
 
+        <View style={{ height: 12 }} />
+
+        <Text style={styles.label}>Server API</Text>
+        <View style={styles.inputWrap}>
+          <Ionicons name="link-outline" size={18} color={colors.textMuted} />
+          <TextInput
+            value={apiBaseUrl}
+            onChangeText={setApiBaseUrl}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder={getDefaultApiBaseUrl()}
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+          />
+        </View>
+
         <View style={{ height: 14 }} />
 
         <Pressable
@@ -104,7 +159,7 @@ export function LoginScreen() {
         <View style={styles.notice}>
           <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
           <Text style={styles.noticeText}>
-            Pastikan API backend aktif dan set EXPO_PUBLIC_API_BASE_URL jika perlu.
+            Untuk demo beda kota, isi Server API pakai URL publik (domain/ngrok) yang bisa diakses semua perangkat.
           </Text>
         </View>
       </View>

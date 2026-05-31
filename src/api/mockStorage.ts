@@ -1,7 +1,7 @@
-import * as SecureStore from 'expo-secure-store';
+import { getStoredString, setStoredString } from '../storage/authToken';
 
 export async function readJson<T>(key: string, fallback: T): Promise<T> {
-  const raw = await SecureStore.getItemAsync(key);
+  const raw = await getStoredString(key);
   if (!raw) return fallback;
   try {
     return JSON.parse(raw) as T;
@@ -11,6 +11,5 @@ export async function readJson<T>(key: string, fallback: T): Promise<T> {
 }
 
 export async function writeJson(key: string, value: unknown): Promise<void> {
-  await SecureStore.setItemAsync(key, JSON.stringify(value));
+  await setStoredString(key, JSON.stringify(value));
 }
-

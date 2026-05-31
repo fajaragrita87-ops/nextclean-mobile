@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config';
+import { getApiBaseUrl } from '../config';
 
 export class ApiError extends Error {
   status: number;
@@ -22,7 +22,8 @@ export async function apiRequest<T>(
   path: string,
   { method = 'GET', token, body, formData }: RequestOptions = {}
 ): Promise<T> {
-  const url = `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+  const base = getApiBaseUrl();
+  const url = `${base}${path.startsWith('/') ? '' : '/'}${path}`;
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
@@ -67,4 +68,3 @@ export async function apiRequest<T>(
 
   return parsed as T;
 }
-

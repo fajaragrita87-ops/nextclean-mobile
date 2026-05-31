@@ -1,6 +1,9 @@
 import React from 'react';
 import type { User } from '../types';
-import { clearAuthToken, getAuthToken, setAuthToken } from '../storage/authToken';
+import { clearAuthToken, getAuthToken, getStoredString, setAuthToken } from '../storage/authToken';
+import { setApiBaseUrlOverride } from '../config';
+
+const API_BASE_URL_KEY = 'api_base_url';
 
 type AuthState = {
   token: string | null;
@@ -33,8 +36,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const token = await getAuthToken();
+        const [token, apiBaseUrl] = await Promise.all([
+          getAuthToken(),
+          getStoredString(API_BASE_URL_KEY),
+        ]);
         if (cancelled) return;
+        setApiBaseUrlOverride(apiBaseUrl);
         setState((prev) => ({ ...prev, token: token ?? null, bootstrapped: true }));
       } catch {
         if (cancelled) return;
@@ -47,12 +54,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = React.useCallback(async (input: { token: string; user?: User | null }) => {
-    await setAuthToken(input.token);
+    try {
+      await setAuthToken(input.token);
+    } catch {}
     setState({ token: input.token, user: input.user ?? null, bootstrapped: true });
   }, []);
 
   const signOut = React.useCallback(async () => {
-    await clearAuthToken();
+    try {
+      await clearAuthToken();
+    } catch {}
     setState({ token: null, user: null, bootstrapped: true });
   }, []);
 
@@ -72,4 +83,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-

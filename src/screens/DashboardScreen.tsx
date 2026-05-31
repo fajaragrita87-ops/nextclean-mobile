@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,8 +13,35 @@ import { AppScaffold } from '../components/AppScaffold';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
+function pad2(n: number) {
+  return String(n).padStart(2, '0');
+}
+
+function localDateKey(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function startOfWeekMonday(date: Date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay();
+  const diff = (day + 6) % 7;
+  d.setDate(d.getDate() - diff);
+  return d;
+}
+
+function addDays(date: Date, days: number) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function isWeekend(date: Date) {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
 export function DashboardScreen({ navigation }: Props) {
-  const { user, token } = useAuth();
+  const { user, token, signOut } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [tasks, setTasks] = React.useState<LaundryTask[]>([]);
   const [attendance, setAttendance] = React.useState<AttendanceRecord[]>([]);
@@ -37,173 +64,237 @@ export function DashboardScreen({ navigation }: Props) {
     }, [load])
   );
 
-  const name = (user?.name ?? user?.email ?? 'Karyawan').trim();
-  const hour = new Date().getHours();
-  const greeting = hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 19 ? 'Selamat sore' : 'Selamat malam';
-  const dateLabel = new Date().toLocaleDateString('id-ID', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-  });
+  const now = new Date();
+  const dayNumber = now.getDate();
+  const weekday = now.toLocaleDateString('id-ID', { weekday: 'long' });
+  const monthYear = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
-  const completed = tasks.filter((t) => t.status === 'Selesai' || t.status === 'Diambil').length;
-  const total = tasks.length;
-  const percent = total ? Math.round((completed / total) * 100) : 0;
-  const inProgress = tasks.filter((t) => t.status !== 'Selesai' && t.status !== 'Diambil').slice(0, 2);
-  const lastAttendance = attendance[0];
+  const attendanceDaySet = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const r of attendance) {
+      const dt = new Date(r.timestamp);
+      if (!Number.isNaN(dt.getTime())) set.add(localDateKey(dt));
+    }
+    return set;
+  }, [attendance]);
+
+  const weekStart = startOfWeekMonday(now);
+  const weekDays = React.useMemo(() => {
+    const labels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'];
+    return labels.map((label, idx) => {
+      const date = addDays(weekStart, idx);
+      return { label, date, key: localDateKey(date) };
+    });
+  }, [weekStart]);
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const workdayKeysThisMonth: string[] = [];
+  for (let d = new Date(monthStart); d <= now; d = addDays(d, 1)) {
+    if (isWeekend(d)) continue;
+    workdayKeysThisMonth.push(localDateKey(d));
+  }
+
+  const hadirThisMonth = workdayKeysThisMonth.filter((k) => attendanceDaySet.has(k)).length;
+  const percentKehadiran = workdayKeysThisMonth.length
+    ? Math.round((hadirThisMonth / workdayKeysThisMonth.length) * 100)
+    : 0;
+  const cutiDiambil = 0;
+  const hariBerjalan = Math.max(1, Math.floor((now.getTime() - monthStart.getTime()) / 86400000) + 1);
 
   return (
     <AppScaffold
       navigation={navigation}
       activeRoute="Dashboard"
-      title="Dashboard"
-      subtitle={`${greeting} • ${dateLabel}${USE_MOCK_API ? ' • Mock API' : ''}`}
+      title="Presensi"
+      subtitle={USE_MOCK_API ? 'Mode Mock' : undefined}
       rightTop={
-        loading ? (
-          <View style={styles.loadingChip}>
-            <ActivityIndicator />
-          </View>
-        ) : (
-          <Pressable onPress={load} style={({ pressed }) => [styles.refresh, pressed ? styles.pressed : null]}>
-            <Ionicons name="refresh" size={18} color={colors.primary} />
+        <View style={styles.topIcons}>
+          <Pressable
+            onPress={load}
+            style={({ pressed }) => [styles.topIconBtn, pressed ? styles.pressed : null]}
+            accessibilityRole="button"
+            accessibilityLabel="Muat ulang"
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Ionicons name="paper-plane-outline" size={18} color="#fff" />
+            )}
           </Pressable>
-        )
-      }
-    >
-      <ScrollView contentContainerStyle={{ paddingBottom: 18 }} showsVerticalScrollIndicator={false}>
-        <View style={styles.hero}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.heroHello}>Hello!</Text>
-            <Text style={styles.heroName} numberOfLines={1}>
-              {name}
-            </Text>
-            <Text style={styles.heroMeta}>
-              {lastAttendance?.type ? `Absensi terakhir: ${lastAttendance.type.toUpperCase()}` : 'Belum ada absensi hari ini'}
-            </Text>
-          </View>
-
-          <View style={styles.heroRing}>
-            <Text style={styles.heroRingValue}>{percent}%</Text>
-            <Text style={styles.heroRingLabel}>Selesai</Text>
-          </View>
-
-          <View style={styles.progressBarWrap}>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFg, { width: `${Math.min(100, Math.max(0, percent))}%` }]} />
-            </View>
-            <Text style={styles.progressText}>
-              {total ? `${completed} dari ${total} pekerjaan` : 'Belum ada pekerjaan'}
-            </Text>
-          </View>
 
           <Pressable
-            onPress={() => navigation.navigate('TaskList')}
-            style={({ pressed }) => [styles.heroCta, pressed ? styles.pressed : null]}
+            onPress={() => Alert.alert('Notifikasi', 'Belum ada notifikasi.')}
+            style={({ pressed }) => [styles.topIconBtn, pressed ? styles.pressed : null]}
+            accessibilityRole="button"
+            accessibilityLabel="Notifikasi"
           >
-            <Text style={styles.heroCtaText}>Lihat Pekerjaan</Text>
-            <Ionicons name="arrow-forward" size={16} color="#fff" />
+            <Ionicons name="notifications-outline" size={18} color="#fff" />
+            <View style={styles.dot} />
+          </Pressable>
+
+          <Pressable
+            onPress={() =>
+              Alert.alert('Akun', 'Keluar dari akun ini?', [
+                { text: 'Batal', style: 'cancel' },
+                { text: 'Keluar', style: 'destructive', onPress: signOut },
+              ])
+            }
+            style={({ pressed }) => [styles.topIconBtn, pressed ? styles.pressed : null]}
+            accessibilityRole="button"
+            accessibilityLabel="Akun"
+          >
+            <Ionicons name="person-outline" size={18} color="#fff" />
+          </Pressable>
+        </View>
+      }
+    >
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.attendanceRow}>
+          <Pressable
+            onPress={() => navigation.navigate('Attendance')}
+            style={({ pressed }) => [styles.attendanceInput, pressed ? styles.pressed : null]}
+            accessibilityRole="button"
+            accessibilityLabel="Ambil absensi hari ini"
+          >
+            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+            <Text style={styles.attendancePlaceholder} numberOfLines={1}>
+              Ambil absensi hari ini
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => navigation.navigate('Attendance')}
+            style={({ pressed }) => [styles.attendanceSubmit, pressed ? styles.pressed : null]}
+            accessibilityRole="button"
+            accessibilityLabel="Absen"
+          >
+            <Text style={styles.attendanceSubmitText}>Absen</Text>
           </Pressable>
         </View>
 
-        <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>In Progress</Text>
-          <Text style={styles.sectionHint}>Fokus 2 teratas</Text>
-        </View>
-        <View style={styles.cardsRow}>
-          {inProgress.map((t) => (
-            <Pressable
-              key={String(t.id)}
-              onPress={() => navigation.navigate('TaskDetail', { taskId: String(t.id) })}
-              style={({ pressed }) => [styles.taskCard, pressed ? styles.pressed : null]}
-            >
-              <View style={styles.taskIcon}>
-                <Ionicons name="shirt-outline" size={18} color={colors.primary} />
-              </View>
-              <Text style={styles.taskTitle} numberOfLines={1}>
-                {t.code ?? `#${t.id}`}
+        <View style={styles.dateCard}>
+          <View style={styles.dateTop}>
+            <Text style={styles.dateNumber}>{dayNumber}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dateWeekday} numberOfLines={1}>
+                {weekday}
               </Text>
-              {t.customerName ? (
-                <Text style={styles.taskSub} numberOfLines={1}>
-                  {t.customerName}
-                </Text>
-              ) : (
-                <Text style={styles.taskSub}>—</Text>
-              )}
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{t.status}</Text>
-              </View>
-            </Pressable>
-          ))}
-          {inProgress.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Ionicons name="sparkles-outline" size={18} color={colors.textMuted} />
-              <Text style={styles.emptyTitle}>Semua beres</Text>
-              <Text style={styles.emptySub}>Tidak ada pekerjaan yang sedang berjalan.</Text>
+              <Text style={styles.dateMonth} numberOfLines={1}>
+                {monthYear}
+              </Text>
             </View>
-          ) : null}
+            <Pressable
+              onPress={() => navigation.navigate('AttendanceHistory')}
+              style={({ pressed }) => [styles.dateArrow, pressed ? styles.pressed : null]}
+              accessibilityRole="button"
+              accessibilityLabel="Lihat riwayat"
+            >
+              <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+            </Pressable>
+          </View>
+
+          <View style={styles.weekWrap}>
+            <Text style={styles.weekTitle}>Status minggu ini</Text>
+            <View style={styles.weekRow}>
+              {weekDays.map((d) => {
+                const hadir = attendanceDaySet.has(d.key);
+                return (
+                  <View key={d.key} style={styles.weekCol}>
+                    <Text style={styles.weekLabel}>{d.label}</Text>
+                    <View
+                      style={[
+                        styles.weekDot,
+                        hadir ? styles.weekDotHadir : styles.weekDotAlpha,
+                      ]}
+                    >
+                      {hadir ? (
+                        <Ionicons name="checkmark" size={14} color="#fff" />
+                      ) : (
+                        <Text style={styles.weekAlphaText}>A</Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
-        <View style={{ height: 18 }} />
-
-        <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Quick Menu</Text>
-          <Text style={styles.sectionHint}>Akses cepat</Text>
+        <View style={styles.statsRow}>
+          <StatCard value={`${percentKehadiran}%`} label="Kehadiran" />
+          <StatCard value={pad2(cutiDiambil)} label="Cuti Diambil" />
+          <StatCard value={pad2(hariBerjalan)} label="Hari Berjalan" />
         </View>
 
-        <View style={styles.quickGrid}>
-          <QuickAction
-            title="Absensi"
-            subtitle="Selfie + GPS"
-            icon="camera-outline"
-            onPress={() => navigation.navigate('Attendance')}
-          />
-          <QuickAction
-            title="Riwayat"
-            subtitle="Data absensi"
-            icon="time-outline"
-            onPress={() => navigation.navigate('AttendanceHistory')}
-          />
-          <QuickAction
-            title="Laundry"
-            subtitle="Daftar tugas"
-            icon="list-outline"
-            onPress={() => navigation.navigate('TaskList')}
-          />
-          <QuickAction
-            title="Profile"
-            subtitle={user?.email ?? 'Akun aktif'}
-            icon="person-outline"
-            onPress={() => navigation.navigate('Dashboard')}
-          />
+        <View style={styles.menuCard}>
+          <View style={styles.menuGrid}>
+            <MenuItem
+              icon="camera-outline"
+              label="Absensi"
+              onPress={() => navigation.navigate('Attendance')}
+            />
+            <MenuItem
+              icon="time-outline"
+              label="Riwayat"
+              onPress={() => navigation.navigate('AttendanceHistory')}
+            />
+            <MenuItem
+              icon="list-outline"
+              label="Tugas"
+              onPress={() => navigation.navigate('TaskList')}
+            />
+            <MenuItem
+              icon="document-text-outline"
+              label="Ajukan Cuti"
+              onPress={() => Alert.alert('Cuti', 'Fitur ajukan cuti belum tersedia.')}
+            />
+            <MenuItem
+              icon="newspaper-outline"
+              label="Berita"
+              onPress={() => Alert.alert('Berita', 'Fitur berita belum tersedia.')}
+            />
+            <MenuItem
+              icon="people-outline"
+              label="Tim"
+              onPress={() => Alert.alert('Tim', 'Fitur tim belum tersedia.')}
+            />
+          </View>
         </View>
       </ScrollView>
     </AppScaffold>
   );
 }
 
-function QuickAction({
-  title,
-  subtitle,
+function StatCard({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.statCard}>
+      <View style={styles.statRing}>
+        <Text style={styles.statValue}>{value}</Text>
+      </View>
+      <Text style={styles.statLabel} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function MenuItem({
   icon,
+  label,
   onPress,
 }: {
-  title: string;
-  subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
+  label: string;
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.quick, pressed ? styles.pressed : null]}>
-      <View style={styles.quickIcon}>
-        <Ionicons name={icon} size={18} color={colors.primary} />
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.menuItem, pressed ? styles.pressed : null]}>
+      <View style={styles.menuIcon}>
+        <Ionicons name={icon} size={20} color={colors.primary} />
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.quickTitle}>{title}</Text>
-        <Text style={styles.quickSub} numberOfLines={1}>
-          {subtitle}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+      <Text style={styles.menuLabel} numberOfLines={1}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -211,6 +302,7 @@ function QuickAction({
 const colors = {
   primary: '#5B67F1',
   primarySoft: '#EEF0FF',
+  danger: '#E64B4B',
   text: '#0E1222',
   textMuted: '#6C7286',
   border: '#E7E9F3',
@@ -219,228 +311,225 @@ const colors = {
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
-  refresh: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: '#DDE0FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingChip: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hero: {
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-    padding: 16,
-    gap: 12,
-  },
-  heroHello: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.85)',
-    letterSpacing: 0.2,
-  },
-  heroName: {
-    marginTop: 2,
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#fff',
-  },
-  heroMeta: {
-    marginTop: 6,
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.8)',
-  },
-  heroRing: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroRingValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#fff',
-  },
-  heroRingLabel: {
-    marginTop: 2,
-    fontSize: 11,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.82)',
-  },
-  progressBarWrap: {
-    gap: 8,
-  },
-  progressBarBg: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    overflow: 'hidden',
-  },
-  progressBarFg: {
-    height: '100%',
-    borderRadius: 999,
-    backgroundColor: '#fff',
-  },
-  progressText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.9)',
-  },
-  heroCta: {
-    marginTop: 2,
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+  topIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  heroCtaText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  sectionRow: {
-    marginTop: 18,
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: colors.text,
-  },
-  sectionHint: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textMuted,
-  },
-  cardsRow: {
-    marginTop: 12,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  taskCard: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 8,
-  },
-  taskIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 14,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: '#DDE0FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  taskTitle: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: colors.text,
-  },
-  taskSub: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: '#DDE0FF',
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.primary,
-  },
-  emptyCard: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 6,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  emptyTitle: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: colors.text,
-  },
-  emptySub: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  quickGrid: {
-    marginTop: 12,
     gap: 10,
   },
-  quick: {
+  topIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.danger,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.85)',
+  },
+  scroll: {
+    paddingBottom: 18,
+  },
+  attendanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: 18,
+    gap: 10,
+    marginBottom: 12,
+  },
+  attendanceInput: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  quickIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 16,
+  attendancePlaceholder: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  attendanceSubmit: {
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: '#F07C90',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attendanceSubmitText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
+  dateCard: {
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    gap: 12,
+  },
+  dateTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  dateNumber: {
+    width: 58,
+    textAlign: 'center',
+    fontSize: 34,
+    fontWeight: '900',
+    color: colors.primary,
+  },
+  dateWeekday: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: colors.text,
+  },
+  dateMonth: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  dateArrow: {
+    width: 36,
+    height: 36,
+    borderRadius: 14,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#DDE0FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickTitle: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: colors.text,
+  weekWrap: {
+    gap: 10,
   },
-  quickSub: {
-    marginTop: 2,
+  weekTitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '900',
+    color: colors.textMuted,
+  },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  weekCol: {
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  weekLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: colors.textMuted,
+  },
+  weekDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekDotHadir: {
+    backgroundColor: colors.primary,
+  },
+  weekDotAlpha: {
+    backgroundColor: '#FFECEF',
+    borderWidth: 1,
+    borderColor: '#FFC7D0',
+  },
+  weekAlphaText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#E64B4B',
+  },
+  statsRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: 8,
+  },
+  statRing: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: colors.primary,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: colors.textMuted,
+  },
+  menuCard: {
+    marginTop: 12,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 10,
+  },
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 12,
+  },
+  menuItem: {
+    width: '33.333%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  menuIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 18,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: '#DDE0FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: {
+    fontSize: 12,
+    fontWeight: '900',
     color: colors.textMuted,
   },
 });
