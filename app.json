@@ -15,6 +15,7 @@
       }
     },
     "android": {
+      "package": "id.minimonster.nextcleanmobile",
       "permissions": [
         "CAMERA",
         "ACCESS_FINE_LOCATION",
