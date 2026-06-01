@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'rea
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { SaveFormat, manipulateAsync } from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { ApiError } from '../api/client';
 import { checkIn, checkOut } from '../api/attendance';
@@ -16,14 +17,24 @@ async function pickSelfie(): Promise<string> {
   const result = await ImagePicker.launchCameraAsync({
     cameraType: ImagePicker.CameraType.front,
     allowsEditing: false,
-    quality: 0.5,
+    quality: 0.35,
   });
 
   if (result.canceled || !result.assets?.[0]?.uri) {
     throw new Error('Pengambilan foto dibatalkan.');
   }
 
-  return result.assets[0].uri;
+  const originalUri = result.assets[0].uri;
+  try {
+    const optimized = await manipulateAsync(
+      originalUri,
+      [{ resize: { width: 720 } }],
+      { compress: 0.55, format: SaveFormat.JPEG }
+    );
+    return optimized.uri;
+  } catch {
+    return originalUri;
+  }
 }
 
 async function ensureCameraPermission(): Promise<void> {
