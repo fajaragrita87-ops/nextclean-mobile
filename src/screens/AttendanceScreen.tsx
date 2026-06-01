@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { ApiError } from '../api/client';
 import { checkIn, checkOut } from '../api/attendance';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../state/AuthContext';
@@ -12,15 +13,10 @@ import { AppScaffold } from '../components/AppScaffold';
 type Props = NativeStackScreenProps<RootStackParamList, 'Attendance'>;
 
 async function pickSelfie(): Promise<string> {
-  const permission = await ImagePicker.requestCameraPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error('Izin kamera diperlukan untuk ambil selfie.');
-  }
-
   const result = await ImagePicker.launchCameraAsync({
     cameraType: ImagePicker.CameraType.front,
     allowsEditing: false,
-    quality: 0.7,
+    quality: 0.5,
   });
 
   if (result.canceled || !result.assets?.[0]?.uri) {
@@ -30,12 +26,21 @@ async function pickSelfie(): Promise<string> {
   return result.assets[0].uri;
 }
 
-async function getGps(): Promise<{ latitude: number; longitude: number }> {
+async function ensureCameraPermission(): Promise<void> {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error('Izin kamera diperlukan untuk ambil selfie.');
+  }
+}
+
+async function ensureLocationPermission(): Promise<void> {
   const permission = await Location.requestForegroundPermissionsAsync();
   if (permission.status !== 'granted') {
     throw new Error('Izin lokasi diperlukan untuk absensi.');
   }
+}
 
+async function getGps(): Promise<{ latitude: number; longitude: number }> {
   const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
   return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
 }
@@ -50,8 +55,11 @@ export function AttendanceScreen({ navigation }: Props) {
       if (!token) return;
       setLoading(true);
       try {
+        await ensureLocationPermission();
         if (type === 'checkin') {
-          const [photoUri, gps] = await Promise.all([pickSelfie(), getGps()]);
+          await ensureCameraPermission();
+          const photoUri = await pickSelfie();
+          const gps = await getGps();
           await checkIn({
             token,
             latitude: gps.latitude,
@@ -71,7 +79,16 @@ export function AttendanceScreen({ navigation }: Props) {
           Alert.alert('Sukses', 'Absen pulang berhasil.');
         }
       } catch (e: any) {
-        Alert.alert('Gagal', String(e?.message ?? e));
+        const baseMessage = String(e?.message ?? e);
+        if (e instanceof ApiError) {
+          const body = e.body;
+          const errors = (body as any)?.errors;
+          const details = errors ? JSON.stringify(errors) : body ? JSON.stringify(body) : '';
+          const msg = `${baseMessage}${details ? `\n${details}` : ''}`;
+          Alert.alert('Gagal', msg.slice(0, 900));
+        } else {
+          Alert.alert('Gagal', baseMessage.slice(0, 900));
+        }
       } finally {
         setLoading(false);
       }
